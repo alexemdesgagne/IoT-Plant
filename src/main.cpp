@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "app_task.h"
 
 void setup() {
