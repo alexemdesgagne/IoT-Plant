@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 
-#include "app_task.h"
+#include "AppTask.h"
 
 void setup() {
     Serial.begin(9600);
@@ -11,7 +11,8 @@ void setup() {
     Serial.println("        Program start         ");
     Serial.println("******************************");
 
-    createTask();
+    AppTask task = AppTask();
+    task.createTasks();
 }
  
 void loop() {
