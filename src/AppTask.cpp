@@ -7,10 +7,14 @@
 #include "AppTask.h"
 #include "app.h"
 
-#define LED_PIN 3
+#define MAIN_LED_PIN                  3
+#define DEBUG_LED_PIN                 13
+#define HUMIDITY_SENSOR_PIN           4
 
 static enum appMode mMode;
 static bool mLedOn;
+
+static QueueHandle_t commQueue;
 
 static void ledThread(void * pvParameters);
 static void sensorThread(void * pvParameters);
@@ -31,6 +35,12 @@ void AppTask::createTasks(void)
 {
     vNopDelayMS(1000); // prevents usb driver crash on startup, do not omit this
 
+    // Create the queues.
+    commQueue = xQueueCreate(5, sizeof(uint8_t));
+    if(commQueue != NULL){
+        Serial.println("LOG: Comm Queue created.");
+    }
+
     // Create the threads that will be managed by the rtos
     // Sets the stack size and priority of each task
     // Also initializes a handler pointer to each task, which are important to communicate with and retrieve info from tasks
@@ -45,26 +55,52 @@ void AppTask::createTasks(void)
 static void ledThread(void * pvParameters) 
 {
     Serial.println("Led Thread: Started");
-    pinMode(LED_PIN, OUTPUT);
+    pinMode(MAIN_LED_PIN, OUTPUT);
+    pinMode(DEBUG_LED_PIN, OUTPUT);
  
     while (1) {
-        if(mLedOn){ 
-            digitalWrite(LED_PIN, 1);
+        if (mMode == normal){
+            if(mLedOn){ 
+                digitalWrite(MAIN_LED_PIN, 1);
+            }
+            else{ 
+                digitalWrite(MAIN_LED_PIN, 0); 
+                analogWrite(MAIN_LED_PIN, 0);
+            }
         }
-        else{ 
-            digitalWrite(LED_PIN, 0); 
-            analogWrite(LED_PIN, 0);
+        else if (mMode == setting){
+            digitalWrite(DEBUG_LED_PIN, 0);
+            delay(1000);
+            digitalWrite(DEBUG_LED_PIN, 1);
         }
+        delay(50);
     }
 }
  
 static void sensorThread(void * pvParameters) 
 {
     Serial.println("Sensor Thread: Started");
- 
+    uint16_t humidSensorVal = 0;
+    const uint16_t dryVal = 895;
+    const uint16_t wetVal = 444;
+
     while(true){
-       Serial.println("LOG: Test");
-       delay(1000);
+        if(mMode == normal){
+            //Serial.println("LOG: Sensor reading.");
+            humidSensorVal = analogRead(HUMIDITY_SENSOR_PIN);
+            // uint8_t val = map(humidSensorVal, wetVal, dryVal, 255, 0); // Humidity sensor
+            uint8_t val = map(humidSensorVal, 1023, 0, 255, 0); // Test potentiometer.
+            Serial.println(val);
+            //ble.write(byte(val)); 
+            xQueueSend(commQueue, &val, ( TickType_t ) 0); // Send the value to the comm task. NO WAIT.
+            if (mLedOn){
+                analogWrite(MAIN_LED_PIN, val);
+            }
+        }
+        else if(mMode == setting){
+            // Do nothing.
+        }
+        delay(10000);
     }
 }
 
@@ -78,6 +114,12 @@ static void commThread(void * pvParameters)
     delay(1000);
 
     while(true){
+        // Check if something must be send to the BLE module.
+        uint8_t sensor_val = 0;
+        if(xQueueReceive(commQueue, &sensor_val, ( TickType_t ) 0)){
+            ble.write(byte(sensor_val));
+        }
+
         // Receive something from USB serial.
         if (Serial.available()){
             ble.write(Serial.read()); 
@@ -89,25 +131,26 @@ static void commThread(void * pvParameters)
             // Process receiving command.
             if (data_from_ble == '1'){
                 data_from_ble = 0;
-                Serial.println("LED ON");
+                Serial.println("LOG: LED ON");
                 mLedOn = true; 
             }
             else if (data_from_ble == '0'){
                 data_from_ble = 0;
-                Serial.println("LED OFF");
+                Serial.println("LOG: LED OFF");
                 mLedOn = false;
             }
             else if (data_from_ble == 'n'){
                 data_from_ble = 0;
-                Serial.println("Normal mode");
+                Serial.println("LOG: Normal mode");
                 mLedOn = false;
                 mMode = normal;
             }
             else if (data_from_ble == 's'){
                 data_from_ble = 0;
-                Serial.println("Setting mode");
+                Serial.println("LOG: Setting mode");
                 mMode = setting;
             }
         }
+        delay(50);
     }
 }
