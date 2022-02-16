@@ -88,10 +88,9 @@ static void sensorThread(void * pvParameters)
         if(mMode == normal){
             //Serial.println("LOG: Sensor reading.");
             humidSensorVal = analogRead(HUMIDITY_SENSOR_PIN);
-            // uint8_t val = map(humidSensorVal, wetVal, dryVal, 255, 0); // Humidity sensor
-            uint8_t val = map(humidSensorVal, 1023, 0, 255, 0); // Test potentiometer.
-            Serial.println(val);
-            //ble.write(byte(val)); 
+            uint8_t val = map(humidSensorVal, wetVal, dryVal, 255, 0); // Humidity sensor
+            // uint8_t val = map(humidSensorVal, 1023, 0, 255, 0); // Test potentiometer.
+            // Serial.println(val);
             xQueueSend(commQueue, &val, ( TickType_t ) 0); // Send the value to the comm task. NO WAIT.
             if (mLedOn){
                 analogWrite(MAIN_LED_PIN, val);
