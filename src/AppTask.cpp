@@ -70,7 +70,7 @@ static void ledThread(void * pvParameters)
         }
         else if (mMode == setting){
             digitalWrite(DEBUG_LED_PIN, 0);
-            delay(1000);
+            delay(500);
             digitalWrite(DEBUG_LED_PIN, 1);
         }
         delay(50);
@@ -100,7 +100,7 @@ static void sensorThread(void * pvParameters)
         else if(mMode == setting){
             // Do nothing.
         }
-        delay(10000);
+        delay(1000);
     }
 }
 
