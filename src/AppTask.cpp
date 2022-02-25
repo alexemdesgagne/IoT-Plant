@@ -105,47 +105,47 @@ static void sensorThread(void * pvParameters)
 
 static void commThread(void * pvParameters)
 {
-    SoftwareSerial ble(7, 6);
-    char data_from_ble = 0;
+    SoftwareSerial xbee(7, 6);
+    char data_from_xbee = 0;
 
     Serial.println("Comm Thread: Started");
-    ble.begin(9600);
+    xbee.begin(9600);
     delay(1000);
 
     while(true){
         // Check if something must be send to the BLE module.
         uint8_t sensor_val = 0;
         if(xQueueReceive(commQueue, &sensor_val, ( TickType_t ) 0)){
-            ble.write(byte(sensor_val));
+            xbee.write(byte(sensor_val));
         }
 
         // Receive something from USB serial.
         if (Serial.available()){
-            ble.write(Serial.read()); 
+            xbee.write(Serial.read()); 
         }
         // Receive something from BLE module.
-        if (ble.available()){
-            data_from_ble = ble.read();
-            Serial.write(data_from_ble);
+        if (xbee.available()){
+            data_from_xbee = xbee.read();
+            Serial.write(data_from_xbee);
             // Process receiving command.
-            if (data_from_ble == '1'){
-                data_from_ble = 0;
+            if (data_from_xbee == '1'){
+                data_from_xbee = 0;
                 Serial.println("LOG: LED ON");
                 mLedOn = true; 
             }
-            else if (data_from_ble == '0'){
-                data_from_ble = 0;
+            else if (data_from_xbee == '0'){
+                data_from_xbee = 0;
                 Serial.println("LOG: LED OFF");
                 mLedOn = false;
             }
-            else if (data_from_ble == 'n'){
-                data_from_ble = 0;
+            else if (data_from_xbee == 'n'){
+                data_from_xbee = 0;
                 Serial.println("LOG: Normal mode");
                 mLedOn = false;
                 mMode = normal;
             }
-            else if (data_from_ble == 's'){
-                data_from_ble = 0;
+            else if (data_from_xbee == 's'){
+                data_from_xbee = 0;
                 Serial.println("LOG: Setting mode");
                 mMode = setting;
             }
